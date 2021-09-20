@@ -267,6 +267,10 @@ export class S3Provider {
 
         const params = this.createS3DownloadParams(opts);
 
+        if (opts.expire) {
+            (params as any).Expires = opts.expire
+        }
+
         try {
             const url = await Promises.fromCallback<string>(c => this.s3Client.getSignedUrl("getObject", params, c));
 

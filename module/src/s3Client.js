@@ -17,16 +17,16 @@ let S3Client = class S3Client {
         return s3;
     }
 };
-tslib_1.__decorate([
-    inject_1.inject()
+(0, tslib_1.__decorate)([
+    (0, inject_1.inject)()
 ], S3Client.prototype, "logger", void 0);
-tslib_1.__decorate([
-    inject_1.inject()
+(0, tslib_1.__decorate)([
+    (0, inject_1.inject)()
 ], S3Client.prototype, "moduleOptions", void 0);
-S3Client = tslib_1.__decorate([
-    inject_1.define(),
-    inject_1.singleton(),
-    inject_1.factory()
+S3Client = (0, tslib_1.__decorate)([
+    (0, inject_1.define)(),
+    (0, inject_1.singleton)(),
+    (0, inject_1.factory)()
 ], S3Client);
 exports.S3Client = S3Client;
 //# sourceMappingURL=s3Client.js.map

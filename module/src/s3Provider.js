@@ -197,6 +197,9 @@ let S3Provider = class S3Provider {
     }
     async getDownloadSignedUrl(opts) {
         const params = this.createS3DownloadParams(opts);
+        if (opts.expire) {
+            params.Expires = opts.expire;
+        }
         try {
             const url = await utils_1.Promises.fromCallback(c => this.s3Client.getSignedUrl("getObject", params, c));
             return url;
@@ -207,15 +210,15 @@ let S3Provider = class S3Provider {
         }
     }
 };
-tslib_1.__decorate([
-    inject_1.inject()
+(0, tslib_1.__decorate)([
+    (0, inject_1.inject)()
 ], S3Provider.prototype, "logger", void 0);
-tslib_1.__decorate([
-    inject_1.inject()
+(0, tslib_1.__decorate)([
+    (0, inject_1.inject)()
 ], S3Provider.prototype, "s3Client", void 0);
-S3Provider = tslib_1.__decorate([
-    inject_1.define(),
-    inject_1.singleton()
+S3Provider = (0, tslib_1.__decorate)([
+    (0, inject_1.define)(),
+    (0, inject_1.singleton)()
 ], S3Provider);
 exports.S3Provider = S3Provider;
 //# sourceMappingURL=s3Provider.js.map

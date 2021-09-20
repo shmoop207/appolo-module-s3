@@ -13,6 +13,7 @@ export interface IOptions {
 export interface S3GetSignedUrlParams {
     bucket: string;
     file: string;
+    expire?:number
 }
 
 export interface S3UpLoadParams {
