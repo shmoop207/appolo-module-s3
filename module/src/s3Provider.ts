@@ -256,7 +256,7 @@ export class S3Provider {
         }
     }
 
-    private async deleteByPrefix(params: { bucket: string, prefix: string }) {
+    public async deleteByPrefix(params: { bucket: string, prefix: string }) {
         let {bucket, prefix} = params
         let data = await this.listFilesAll({prefix: prefix, bucket: bucket});
 
