@@ -185,6 +185,18 @@ let S3Provider = class S3Provider {
             throw e;
         }
     }
+    async deleteByPrefix(params) {
+        var _a;
+        let { bucket, prefix } = params;
+        let data = await this.listFilesAll({ prefix: prefix, bucket: bucket });
+        if (!((_a = data === null || data === void 0 ? void 0 : data.Contents) === null || _a === void 0 ? void 0 : _a.length)) {
+            return;
+        }
+        await utils_1.Promises.map(data.Contents, item => this.delete({
+            bucket: bucket,
+            key: item.Key
+        }), { concurrency: 5 });
+    }
     async copyUrl(url, opts) {
         await utils_1.Promises.fromCallback(c => {
             let client = (url || "").startsWith("https://") ? https : http;

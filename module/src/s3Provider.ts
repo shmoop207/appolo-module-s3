@@ -256,6 +256,21 @@ export class S3Provider {
         }
     }
 
+    private async deleteByPrefix(params: { bucket: string, prefix: string }) {
+        let {bucket, prefix} = params
+        let data = await this.listFilesAll({prefix: prefix, bucket: bucket});
+
+        if (!data?.Contents?.length) {
+            return;
+        }
+
+        await Promises.map(data.Contents, item => this.delete({
+            bucket: bucket,
+            key: item.Key
+        }), {concurrency: 5})
+
+    }
+
     public async copyUrl(url: string, opts: S3UpLoadParams & { buffer?: string }): Promise<void> {
         await Promises.fromCallback(c => {
             let client = (url || "").startsWith("https://") ? (https as any) : http;
