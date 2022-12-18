@@ -21,7 +21,7 @@ let S3Module = S3Module_1 = class S3Module extends engine_1.Module {
         return [{ id: this.moduleOptions.id, type: index_1.S3Provider }];
     }
 };
-S3Module = S3Module_1 = (0, tslib_1.__decorate)([
+S3Module = S3Module_1 = tslib_1.__decorate([
     (0, engine_1.module)()
 ], S3Module);
 exports.S3Module = S3Module;

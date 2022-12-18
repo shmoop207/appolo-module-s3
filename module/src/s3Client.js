@@ -17,13 +17,13 @@ let S3Client = class S3Client {
         return s3;
     }
 };
-(0, tslib_1.__decorate)([
+tslib_1.__decorate([
     (0, inject_1.inject)()
 ], S3Client.prototype, "logger", void 0);
-(0, tslib_1.__decorate)([
+tslib_1.__decorate([
     (0, inject_1.inject)()
 ], S3Client.prototype, "moduleOptions", void 0);
-S3Client = (0, tslib_1.__decorate)([
+S3Client = tslib_1.__decorate([
     (0, inject_1.define)(),
     (0, inject_1.singleton)(),
     (0, inject_1.factory)()

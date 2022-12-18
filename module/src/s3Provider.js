@@ -37,9 +37,27 @@ let S3Provider = class S3Provider {
         let metaData = {
             Bucket: opts.bucket,
             Prefix: opts.prefix,
-            MaxKeys: opts.maxKeys || 100
+            MaxKeys: opts.maxKeys || 1000
         };
         let result = await utils_1.Promises.fromCallback(c => this.s3Client.listObjectsV2(metaData, c));
+        return result;
+    }
+    async listFilesAll(opts) {
+        let metaData = {
+            Bucket: opts.bucket,
+            Prefix: opts.prefix,
+            MaxKeys: opts.maxKeys || 1000
+        };
+        let result = await utils_1.Promises.fromCallback(c => this.s3Client.listObjectsV2(metaData, c));
+        if (opts.contents) {
+            result.Contents = [...opts.contents, ...result.Contents];
+        }
+        if (!result.IsTruncated) {
+            return result;
+        }
+        if (result.NextContinuationToken) {
+            result = await this.listFilesAll(Object.assign(Object.assign({}, opts), { nextToken: result.NextContinuationToken, contents: result.Contents }));
+        }
         return result;
     }
     async download(opts) {
@@ -210,13 +228,13 @@ let S3Provider = class S3Provider {
         }
     }
 };
-(0, tslib_1.__decorate)([
+tslib_1.__decorate([
     (0, inject_1.inject)()
 ], S3Provider.prototype, "logger", void 0);
-(0, tslib_1.__decorate)([
+tslib_1.__decorate([
     (0, inject_1.inject)()
 ], S3Provider.prototype, "s3Client", void 0);
-S3Provider = (0, tslib_1.__decorate)([
+S3Provider = tslib_1.__decorate([
     (0, inject_1.define)(),
     (0, inject_1.singleton)()
 ], S3Provider);

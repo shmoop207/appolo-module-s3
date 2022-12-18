@@ -11,6 +11,7 @@ import {ILogger} from "@appolo/logger";
 import {define, inject, singleton} from "@appolo/inject";
 import {S3DirUpLoadParams, S3GetSignedUrlParams, S3UpLoadParams} from "./IOptions";
 import {Promises, Strings} from "@appolo/utils";
+import {ObjectList} from "aws-sdk/clients/s3";
 
 let http = followRedirects.http as typeof httpTemp;
 let https = followRedirects.https as typeof httpsTemp;
@@ -52,10 +53,40 @@ export class S3Provider {
         let metaData: AWS.S3.Types.ListObjectsV2Request = {
             Bucket: opts.bucket,
             Prefix: opts.prefix,
-            MaxKeys: opts.maxKeys || 100
+            MaxKeys: opts.maxKeys || 1000
         };
 
         let result = await Promises.fromCallback(c => this.s3Client.listObjectsV2(metaData, c));
+
+        return result;
+    }
+
+    public async listFilesAll(opts: { prefix: string, bucket: string, maxKeys?: number, nextToken?: string, contents?: AWS.S3.Types.ObjectList }): Promise<AWS.S3.Types.ListObjectsV2Output> {
+
+        let metaData: AWS.S3.Types.ListObjectsV2Request = {
+            Bucket: opts.bucket,
+            Prefix: opts.prefix,
+            MaxKeys: opts.maxKeys || 1000
+        };
+
+        let result = await Promises.fromCallback<AWS.S3.Types.ListObjectsV2Output>(c => this.s3Client.listObjectsV2(metaData, c));
+
+
+        if (opts.contents) {
+            result.Contents = [...opts.contents, ...result.Contents]
+        }
+
+        if (!result.IsTruncated) {
+            return result;
+        }
+
+        if (result.NextContinuationToken) {
+            result = await this.listFilesAll({
+                ...opts,
+                nextToken: result.NextContinuationToken,
+                contents: result.Contents
+            })
+        }
 
         return result;
     }
@@ -174,7 +205,7 @@ export class S3Provider {
                 Bucket: opts.bucket
             };
 
-            let result = await Promises.fromCallback(c =>
+            let result = await Promises.fromCallback<AWS.S3.Types.HeadObjectOutput>(c =>
                 this.s3Client.headObject(params, c)
             );
 
