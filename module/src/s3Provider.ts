@@ -120,7 +120,7 @@ export class S3Provider {
 
     }
 
-    public async downloadStream(opts: { fileName: string, gzip?: boolean, bucket, output: string }): Promise<Readable> {
+    public async downloadStream(opts: { fileName: string, gzip?: boolean, bucket }): Promise<Readable> {
 
         let options = {
             Bucket: opts.bucket,
