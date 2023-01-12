@@ -77,6 +77,17 @@ let S3Provider = class S3Provider {
             stream.pipe(writer);
         });
     }
+    async downloadStream(opts) {
+        let options = {
+            Bucket: opts.bucket,
+            Key: opts.fileName
+        };
+        let stream = this.s3Client.getObject(options).createReadStream();
+        if (opts.gzip) {
+            stream = stream.pipe(zlib.createGunzip());
+        }
+        return stream;
+    }
     async getObject(opts) {
         let options = {
             Bucket: opts.bucket,

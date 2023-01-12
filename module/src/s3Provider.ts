@@ -12,6 +12,7 @@ import {define, inject, singleton} from "@appolo/inject";
 import {S3DirUpLoadParams, S3GetSignedUrlParams, S3UpLoadParams} from "./IOptions";
 import {Promises, Strings} from "@appolo/utils";
 import {ObjectList} from "aws-sdk/clients/s3";
+import {Readable} from "stream";
 
 let http = followRedirects.http as typeof httpTemp;
 let https = followRedirects.https as typeof httpsTemp;
@@ -117,6 +118,22 @@ export class S3Provider {
             stream.pipe(writer);
         });
 
+    }
+
+    public async downloadStream(opts: { fileName: string, gzip?: boolean, bucket, output: string }): Promise<Readable> {
+
+        let options = {
+            Bucket: opts.bucket,
+            Key: opts.fileName
+        };
+
+        let stream = this.s3Client.getObject(options).createReadStream();
+
+        if (opts.gzip) {
+            stream = stream.pipe(zlib.createGunzip())
+        }
+
+        return stream
     }
 
     public async getObject(opts: { fileName: string, bucket: string, gzip?: boolean }): Promise<Buffer | string> {
