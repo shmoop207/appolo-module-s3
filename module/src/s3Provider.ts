@@ -1,18 +1,34 @@
 import zlib = require("zlib");
 import fs = require("fs");
 import path = require("path");
-import AWS = require("aws-sdk");
+import {
+    S3,
+    ListObjectsV2Request,
+    ListObjectsV2Output,
+    GetObjectCommand,
+    GetObjectRequest,
+    PutObjectRequest,
+    PutObjectCommand,
+    DeleteObjectRequest,
+    CopyObjectRequest,
+    PutObjectCommandInput,
+    ListObjectsV2CommandOutput,
+    GetObjectCommandInput,
+    HeadObjectOutput,
+    HeadObjectRequest,
+    _Object
+} from "@aws-sdk/client-s3";
 import followRedirects = require("follow-redirects");
 import httpTemp = require("http");
 import httpsTemp = require("https");
 import urlClass = require("url");
-//import _ = require("lodash");
 import {ILogger} from "@appolo/logger";
 import {define, inject, singleton} from "@appolo/inject";
 import {S3DirUpLoadParams, S3GetSignedUrlParams, S3UpLoadParams} from "./IOptions";
-import {Promises, Strings} from "@appolo/utils";
-import {ObjectList} from "aws-sdk/clients/s3";
+import {Promises, Strings, Streams} from "@appolo/utils";
 import {Readable} from "stream";
+import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
+
 
 let http = followRedirects.http as typeof httpTemp;
 let https = followRedirects.https as typeof httpsTemp;
@@ -21,13 +37,11 @@ let https = followRedirects.https as typeof httpsTemp;
 @singleton()
 export class S3Provider {
     @inject() protected logger: ILogger;
-    @inject() protected s3Client: AWS.S3;
+    @inject() protected s3Client: S3;
 
     public async uploadDir(opts: S3DirUpLoadParams): Promise<void> {
         try {
-            let files: string[] = await Promises.fromCallback(c =>
-                fs.readdir(opts.sourceDir, c)
-            );
+            let files: string[] = await Promises.fromCallback(c => fs.readdir(opts.sourceDir, c));
 
             await Promises.map(files, file => {
                 let dto: S3UpLoadParams = {
@@ -49,29 +63,38 @@ export class S3Provider {
         }
     }
 
-    public async listFiles(opts: { prefix: string, bucket: string, maxKeys?: number }): Promise<AWS.S3.Types.ListObjectsV2Output> {
+    public async listFiles(opts: { prefix: string, bucket: string, maxKeys?: number }): Promise<ListObjectsV2Output> {
 
-        let metaData: AWS.S3.Types.ListObjectsV2Request = {
+        let metaData: ListObjectsV2Request = {
             Bucket: opts.bucket,
             Prefix: opts.prefix,
             MaxKeys: opts.maxKeys || 1000
         };
 
-        let result = await Promises.fromCallback(c => this.s3Client.listObjectsV2(metaData, c));
+        let result = await this.s3Client.listObjectsV2(metaData);
 
         return result;
     }
 
-    public async listFilesAll(opts: { prefix: string, bucket: string, maxKeys?: number, nextToken?: string, contents?: AWS.S3.Types.ObjectList }): Promise<AWS.S3.Types.ListObjectsV2Output> {
+    public async listFilesAll(opts: {
+        prefix: string,
+        bucket: string,
+        maxKeys?: number,
+        nextToken?: string,
+        contents?: _Object[]
+    }): Promise<ListObjectsV2CommandOutput> {
 
-        let metaData: AWS.S3.Types.ListObjectsV2Request = {
+        let metaData: ListObjectsV2Request = {
             Bucket: opts.bucket,
             Prefix: opts.prefix,
             MaxKeys: opts.maxKeys || 1000
         };
 
-        let result = await Promises.fromCallback<AWS.S3.Types.ListObjectsV2Output>(c => this.s3Client.listObjectsV2(metaData, c));
+        let result = await this.s3Client.listObjectsV2(metaData);
 
+        if (!result.Contents) {
+            result.Contents = [];
+        }
 
         if (opts.contents) {
             result.Contents = [...opts.contents, ...result.Contents]
@@ -94,10 +117,10 @@ export class S3Provider {
 
     public async download(opts: { fileName: string, gzip?: boolean, bucket, output: string }): Promise<string> {
 
-        return new Promise((resolve: (paths: string) => void, reject) => {
+        return new Promise(async (resolve: (paths: string) => void, reject) => {
 
 
-            let options = {
+            let options: GetObjectCommandInput = {
                 Bucket: opts.bucket,
                 Key: opts.fileName
             };
@@ -106,7 +129,9 @@ export class S3Provider {
 
             let writer = fs.createWriteStream(path).on('finish', () => resolve(path));
 
-            let stream = this.s3Client.getObject(options).createReadStream()
+            let output = await this.s3Client.getObject(options)
+
+            let stream = (output.Body as Readable)
                 .on('error', (e) => reject(e));
 
             if (opts.gzip) {
@@ -122,12 +147,13 @@ export class S3Provider {
 
     public async downloadStream(opts: { fileName: string, gzip?: boolean, bucket }): Promise<Readable> {
 
-        let options = {
+        let options: GetObjectCommandInput = {
             Bucket: opts.bucket,
             Key: opts.fileName
         };
 
-        let stream = this.s3Client.getObject(options).createReadStream();
+        let output = await this.s3Client.getObject(options);
+        let stream = output.Body as Readable;
 
         if (opts.gzip) {
             stream = stream.pipe(zlib.createGunzip())
@@ -136,38 +162,39 @@ export class S3Provider {
         return stream
     }
 
-    public async getObject(opts: { fileName: string, bucket: string, gzip?: boolean }): Promise<Buffer | string> {
+    public async getObject(opts: { fileName: string, bucket: string, gzip?: boolean }): Promise<Buffer> {
         let options = {
             Bucket: opts.bucket,
             Key: opts.fileName
         };
 
-        let result = await this.s3Client.getObject(options).promise();
+        let result = await this.s3Client.getObject(options)
 
-        let body = result.Body;
+        let stream = result.Body as Readable;
 
         if (opts.gzip) {
-            body = await Promises.fromCallback(c => zlib.gunzip(body as Buffer, {}, c))
+            stream = stream.pipe(zlib.createGunzip());
         }
 
-        return body as Buffer;
+        let buffer = await Streams.convertToBuffer(stream);
 
+        return buffer;
     }
 
     public async upload(opts: S3UpLoadParams): Promise<void> {
         try {
+            const params = this._createS3UploadParams(opts);
 
-            const params = this.createS3UploadParams(opts);
-
-            params.Body = opts.buffer;
+            let buffer = opts.buffer;
 
             if (opts.gzip) {
-                params.Body = await Promises.fromCallback(c => zlib.gzip(opts.buffer as string, c));
+                buffer = await Promises.fromCallback(c => zlib.gzip(buffer as string, c));
             }
 
-            await Promises.fromCallback(c => this.s3Client.upload(params, c));
+            params.Body = buffer;
 
-            this.logger.info(`file uploaded ${opts.file}`);
+            await this.s3Client.putObject(params)
+
         } catch (e) {
             this.logger.error(`failed to upload file ${opts.file}`, {error: e});
 
@@ -175,8 +202,8 @@ export class S3Provider {
         }
     }
 
-    private createS3DownloadParams(opts: S3GetSignedUrlParams): AWS.S3.Types.GetObjectRequest {
-        let params = <AWS.S3.Types.GetObjectRequest>{
+    private _createS3DownloadParams(opts: S3GetSignedUrlParams): GetObjectRequest {
+        let params = <GetObjectRequest>{
             Bucket: opts.bucket,
             Key: opts.file
         };
@@ -184,8 +211,8 @@ export class S3Provider {
         return params;
     }
 
-    private createS3UploadParams(opts: S3UpLoadParams): AWS.S3.Types.PutObjectRequest {
-        let params = <AWS.S3.Types.PutObjectRequest>{
+    private _createS3UploadParams(opts: S3UpLoadParams): PutObjectCommandInput {
+        let params = <PutObjectRequest>{
             Bucket: opts.bucket,
             Key: opts.file,
             ContentType: opts.contentType,
@@ -215,16 +242,14 @@ export class S3Provider {
         return params;
     }
 
-    public async head(opts: { bucket: string; file: string; }): Promise<AWS.S3.Types.HeadObjectOutput> {
+    public async head(opts: { bucket: string; file: string; }): Promise<HeadObjectOutput> {
         try {
-            let params = <AWS.S3.Types.HeadObjectRequest>{
+            let params = <HeadObjectRequest>{
                 Key: opts.file,
                 Bucket: opts.bucket
             };
 
-            let result = await Promises.fromCallback<AWS.S3.Types.HeadObjectOutput>(c =>
-                this.s3Client.headObject(params, c)
-            );
+            let result = await this.s3Client.headObject(params)
 
             return result;
         } catch (e) {
@@ -238,15 +263,23 @@ export class S3Provider {
         }
     }
 
+    public async exists(opts: { bucket: string; file: string; }): Promise<boolean> {
+
+        let result = await this.head(opts);
+
+        return result !== null;
+
+    }
+
     public async copy(opts: { bucket: string; source: string; target: string; }): Promise<void> {
         try {
-            let params = <AWS.S3.Types.CopyObjectRequest>{
+            let params = <CopyObjectRequest>{
                 Bucket: opts.bucket,
                 CopySource: opts.source,
                 Key: opts.target
             };
 
-            await Promises.fromCallback(c => this.s3Client.copyObject(params, c));
+            await this.s3Client.copyObject(params);
         } catch (e) {
             this.logger.error(`failed to copy ${opts.source} to ${opts.target}`, {
                 e: e
@@ -258,12 +291,13 @@ export class S3Provider {
 
     public async delete(opts: { bucket: string; key: string }): Promise<void> {
         try {
-            let params = <AWS.S3.Types.DeleteObjectRequest>{
+            let params = <DeleteObjectRequest>{
                 Bucket: opts.bucket,
                 Key: opts.key
             };
 
-            await Promises.fromCallback(c => this.s3Client.deleteObject(params, c));
+            await this.s3Client.deleteObject(params);
+
         } catch (e) {
             this.logger.error(`failed to delete ${opts.key} bucket ${opts.bucket}`, {
                 e: e
@@ -312,10 +346,13 @@ export class S3Provider {
     }
 
     public async getUploadSignedUrl(opts: S3UpLoadParams): Promise<string> {
-        const params = this.createS3UploadParams(opts);
+        const params = this._createS3UploadParams(opts);
 
         try {
-            const url = await Promises.fromCallback<string>(c => this.s3Client.getSignedUrl("putObject", params, c));
+
+            let command = new PutObjectCommand(params);
+
+            const url = await getSignedUrl(this.s3Client, command, {expiresIn: 3600});
 
             return url;
 
@@ -328,14 +365,12 @@ export class S3Provider {
 
     public async getDownloadSignedUrl(opts: S3GetSignedUrlParams): Promise<string> {
 
-        const params = this.createS3DownloadParams(opts);
-
-        if (opts.expire) {
-            (params as any).Expires = opts.expire
-        }
+        const params = this._createS3DownloadParams(opts);
 
         try {
-            const url = await Promises.fromCallback<string>(c => this.s3Client.getSignedUrl("getObject", params, c));
+            let command = new GetObjectCommand(params);
+
+            const url = await getSignedUrl(this.s3Client, command, {expiresIn: opts.expire || 3600});
 
             return url;
         } catch (e) {

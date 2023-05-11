@@ -13,14 +13,14 @@ export interface IOptions {
 export interface S3GetSignedUrlParams {
     bucket: string;
     file: string;
-    expire?:number
+    expire?: number
 }
 
 export interface S3UpLoadParams {
     file: string;
     gzip?: boolean;
     contentType: string;
-    buffer?: Buffer | string | Readable;
+    buffer?: Buffer | string | Readable | Blob;
     bucket: string;
     public?: boolean;
     cache?: number;

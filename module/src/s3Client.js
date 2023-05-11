@@ -3,16 +3,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.S3Client = void 0;
 const tslib_1 = require("tslib");
 const inject_1 = require("@appolo/inject");
-const AWS = require("aws-sdk");
+const client_s3_1 = require("@aws-sdk/client-s3");
 let S3Client = class S3Client {
     async get() {
-        let s3 = new AWS.S3({
-            httpOptions: {
-                timeout: this.moduleOptions.timeout || 120000
+        // httpOptions: {
+        //     timeout: this.moduleOptions.timeout || 120000
+        // },
+        let s3 = new client_s3_1.S3({
+            credentials: {
+                accessKeyId: process.env.AMAZON_ACCESS_KEY_ID || this.moduleOptions.awsAccessKeyId,
+                secretAccessKey: process.env.AMAZON_SECRET_ACCESS_KEY || this.moduleOptions.awsSecretAccessKey
             },
             region: this.moduleOptions.region,
-            accessKeyId: process.env.AMAZON_ACCESS_KEY_ID || this.moduleOptions.awsAccessKeyId,
-            secretAccessKey: process.env.AMAZON_SECRET_ACCESS_KEY || this.moduleOptions.awsSecretAccessKey
         });
         return s3;
     }
