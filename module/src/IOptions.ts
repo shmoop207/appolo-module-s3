@@ -4,8 +4,11 @@ import {Readable} from "stream";
 export interface IOptions {
     id?: string;
     region?: string;
-    awsAccessKeyId: string
-    awsSecretAccessKey: string
+    endpoint?: string;
+    accessKeyId: string
+    secretAccessKey: string
+    awsAccessKeyId?: string
+    awsSecretAccessKey?: string
     timeout?: number
 
 }

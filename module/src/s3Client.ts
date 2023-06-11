@@ -12,7 +12,6 @@ export class S3Client implements IFactory<S3> {
     @inject() protected logger: ILogger;
     @inject() protected moduleOptions: IOptions;
 
-
     public async get(): Promise<S3> {
 
         // httpOptions: {
@@ -20,10 +19,10 @@ export class S3Client implements IFactory<S3> {
         // },
 
         let s3 = new S3({
-
+            endpoint: this.moduleOptions.endpoint,
             credentials: {
-                accessKeyId: process.env.AMAZON_ACCESS_KEY_ID || this.moduleOptions.awsAccessKeyId,
-                secretAccessKey: process.env.AMAZON_SECRET_ACCESS_KEY || this.moduleOptions.awsSecretAccessKey
+                accessKeyId: process.env.AMAZON_ACCESS_KEY_ID || this.moduleOptions.awsAccessKeyId || this.moduleOptions.accessKeyId,
+                secretAccessKey: process.env.AMAZON_SECRET_ACCESS_KEY || this.moduleOptions.awsSecretAccessKey || this.moduleOptions.secretAccessKey
             },
             region: this.moduleOptions.region,
 

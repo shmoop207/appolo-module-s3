@@ -10,9 +10,10 @@ let S3Client = class S3Client {
         //     timeout: this.moduleOptions.timeout || 120000
         // },
         let s3 = new client_s3_1.S3({
+            endpoint: this.moduleOptions.endpoint,
             credentials: {
-                accessKeyId: process.env.AMAZON_ACCESS_KEY_ID || this.moduleOptions.awsAccessKeyId,
-                secretAccessKey: process.env.AMAZON_SECRET_ACCESS_KEY || this.moduleOptions.awsSecretAccessKey
+                accessKeyId: process.env.AMAZON_ACCESS_KEY_ID || this.moduleOptions.awsAccessKeyId || this.moduleOptions.accessKeyId,
+                secretAccessKey: process.env.AMAZON_SECRET_ACCESS_KEY || this.moduleOptions.awsSecretAccessKey || this.moduleOptions.secretAccessKey
             },
             region: this.moduleOptions.region,
         });

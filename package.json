@@ -1,6 +1,6 @@
 {
   "name": "@appolo/s3",
-  "version": "8.1.0",
+  "version": "8.1.1",
   "description": "",
   "private": false,
   "keywords": [],
@@ -12,8 +12,8 @@
     "@appolo/engine": "^8.0.24",
     "@appolo/logger": "^8.1.2",
     "@appolo/utils": "^8.0.46",
-    "@aws-sdk/client-s3": "^3.329.0",
-    "@aws-sdk/s3-request-presigner": "^3.329.0",
+    "@aws-sdk/client-s3": "^3.347.1",
+    "@aws-sdk/s3-request-presigner": "^3.347.1",
     "follow-redirects": "^1.15.2"
   },
   "devDependencies": {
