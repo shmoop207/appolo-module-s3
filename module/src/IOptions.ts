@@ -27,6 +27,8 @@ export interface S3UpLoadParams {
     bucket: string;
     public?: boolean;
     cache?: number;
+    cacheControl?: string,
+    metaData?: { [index: string]: string },
     contentEncoding?: string;
     expires?: string | Date | number;
 }

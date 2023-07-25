@@ -227,6 +227,14 @@ export class S3Provider {
             params.CacheControl = `public, max-age=${opts.cache}`;
         }
 
+        if (opts.cacheControl) {
+            params.CacheControl = opts.cacheControl;
+        }
+
+        if(opts.metaData){
+            params.Metadata = opts.metaData;
+        }
+
         if (opts.public) {
             params.ACL = `public-read`;
         }
