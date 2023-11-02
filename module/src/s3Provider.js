@@ -154,7 +154,7 @@ let S3Provider = class S3Provider {
         }
         if (opts.expires) {
             if (typeof opts.expires === "number") {
-                params.Expires = opts.expires;
+                params.Expires = new Date(Date.now() + (opts.expires * 1000));
             }
             else {
                 params.Expires = new Date(opts.expires);

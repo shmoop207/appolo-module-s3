@@ -231,7 +231,7 @@ export class S3Provider {
             params.CacheControl = opts.cacheControl;
         }
 
-        if(opts.metaData){
+        if (opts.metaData) {
             params.Metadata = opts.metaData;
         }
 
@@ -241,7 +241,7 @@ export class S3Provider {
 
         if (opts.expires) {
             if (typeof opts.expires === "number") {
-                params.Expires = opts.expires as any;
+                params.Expires = new Date(Date.now() + (opts.expires * 1000));
             } else {
                 params.Expires = new Date(opts.expires);
             }
